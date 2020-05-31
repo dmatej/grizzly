@@ -14,12 +14,11 @@ WebSocket, Comet, and more!
 Grizzly currently has several lines of development in the following
 branches:
 
-- 2.3.x : This is the sustaining branch for 2.3. (latest release is 2.3.33)
-- master : This is the sustaining branch for the most recent major release of Grizzly. (latest release is 2.4.2)
-- 3.0.x : This is our upcoming 3.0 release.  Fair warning; it's not backwards compatible with previous releases.
+- EE4J_8 The historical branch used to create the Grizzly version for Jakarta EE 8/GlassFish 5.1
+- 2.4.4-RELEASE : This is the sustaining branch for 2.x.
+- master : Currently in flux, will be updated later
+- 3.0.0: The Jakarta-ized version of Jersey. Release 3.0.0-M1 has been created from this branch.
 
-There are other branches for older releases of Grizzly that we don't
-actively maintain at this time, but we keep them for the history.
 
 
 ### Prerequisites
