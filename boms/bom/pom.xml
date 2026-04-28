@@ -24,7 +24,7 @@
     <parent>
         <groupId>org.eclipse.ee4j</groupId>
         <artifactId>project</artifactId>
-        <version>1.0.9</version>
+        <version>2.0.2</version>
         <relativePath />
     </parent>
 
@@ -37,39 +37,6 @@
     <description>Grizzly Bill of Materials (BOM)</description>
 
     <url>https://eclipse-ee4j.github.io/glassfish-grizzly</url>
-
-    <!-- TODO: Can be removed after it would be removed from parent too -->
-    <distributionManagement>
-        <snapshotRepository>
-            <id>ossrh</id>
-            <name>Disabled Sonatype Nexus</name>
-            <url>http://localhost</url>
-            <releases>
-                <enabled>false</enabled>
-            </releases>
-            <snapshots>
-                <enabled>false</enabled>
-            </snapshots>
-        </snapshotRepository>
-        <repository>
-            <id>ossrh</id>
-            <name>Disabled Sonatype Nexus</name>
-            <url>http://localhost</url>
-            <releases>
-                <enabled>false</enabled>
-            </releases>
-            <snapshots>
-                <enabled>false</enabled>
-            </snapshots>
-        </repository>
-    </distributionManagement>
-
-    <properties>
-        <!-- Do not autopublish by default -->
-        <release.autopublish>false</release.autopublish>
-        <!-- By default block until everything is really published -->
-        <release.waitUntil>published</release.waitUntil>
-    </properties>
 
     <dependencyManagement>
         <dependencies>
@@ -233,33 +200,17 @@
                     <warn>false</warn>
                 </configuration>
             </plugin>
-            <plugin>
-                <groupId>org.sonatype.plugins</groupId>
-                <artifactId>nexus-staging-maven-plugin</artifactId>
-                <version>1.7.0</version>
-                <configuration>
-                    <skipNexusStagingDeployMojo>true</skipNexusStagingDeployMojo>
-                </configuration>
-                <executions>
-                    <execution>
-                        <id>injected-nexus-deploy</id>
-                        <phase>none</phase>
-                    </execution>
-                </executions>
-            </plugin>
-            <plugin>
-                <groupId>org.sonatype.central</groupId>
-                <artifactId>central-publishing-maven-plugin</artifactId>
-                <version>0.10.0</version>
-                <extensions>true</extensions>
-                <configuration>
-                    <autoPublish>${release.autopublish}</autoPublish>
-                    <centralSnapshotsUrl>https://central.sonatype.com/repository/maven-snapshots</centralSnapshotsUrl>
-                    <deploymentName>Eclipse Grizzly ${project.version}</deploymentName>
-                    <publishingServerId>central</publishingServerId>
-                    <waitUntil>${release.waitUntil}</waitUntil>
-                </configuration>
-            </plugin>
         </plugins>
     </build>
+
+    <profiles>
+        <profile>
+            <id>oss-release</id>
+            <properties>
+                <release.projectName>Eclipse Grizzly</release.projectName>
+                <release.autoPublish>false</release.autoPublish>
+                <release.waitUntil>published</release.waitUntil>
+            </properties>
+        </profile>
+    </profiles>
 </project>
