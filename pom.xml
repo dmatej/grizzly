@@ -24,28 +24,15 @@
     <parent>
         <groupId>org.glassfish.grizzly</groupId>
         <artifactId>grizzly-bom</artifactId>
-        <version>5.0.0-SNAPSHOT</version>
+        <version>5.0.1-SNAPSHOT</version>
         <relativePath>boms/bom/pom.xml</relativePath>
     </parent>
 
     <artifactId>grizzly-project</artifactId>
-    <!-- Version must be repeated so versions-maven-plugin:set works correctly -->
-    <version>5.0.1-SNAPSHOT</version>
     <packaging>pom</packaging>
 
     <name>Grizzly Parent POM</name>
     <description>${project.artifactId}</description>
-    <url>https://eclipse-ee4j.github.io/glassfish-grizzly</url>
-    <organization>
-        <name>Eclipse Foundation - GlassFish Project</name>
-        <url>https://glassfish.org</url>
-    </organization>
-    <licenses>
-        <license>
-            <name>EPL-2.0</name>
-            <url>http://www.eclipse.org/legal/epl-2.0</url>
-        </license>
-    </licenses>
 
     <developers>
         <developer>
@@ -94,51 +81,12 @@
         </contributor>
     </contributors>
 
-    <mailingLists>
-        <mailingList>
-            <name>Mailing list: glassfish-dev</name>
-            <archive>glassfish-dev@eclipse.org</archive>
-        </mailingList>
-    </mailingLists>
-
     <modules>
         <module>boms/bom</module>
         <module>modules</module>
         <module>samples</module>
         <module>extras</module>
     </modules>
-
-    <scm>
-        <connection>scm:git:https://github.com/eclipse-ee4j/glassfish-grizzly.git</connection>
-        <developerConnection>scm:git:git@github.com:eclipse-ee4j/glassfish-grizzly.git</developerConnection>
-        <url>https://github.com/eclipse-ee4j/glassfish-grizzly</url>
-        <tag>HEAD</tag>
-    </scm>
-    <issueManagement>
-        <system>GitHub</system>
-        <url>https://github.com/eclipse-ee4j/grizzly/issues</url>
-    </issueManagement>
-
-    <repositories>
-        <repository>
-            <id>central</id>
-            <url>https://repo1.maven.org/maven2</url>
-            <releases>
-                <checksumPolicy>fail</checksumPolicy>
-            </releases>
-        </repository>
-        <repository>
-            <id>central-portal-snapshots</id>
-            <url>https://central.sonatype.com/repository/maven-snapshots</url>
-            <releases>
-                <enabled>false</enabled>
-            </releases>
-            <snapshots>
-                <enabled>true</enabled>
-                <checksumPolicy>fail</checksumPolicy>
-            </snapshots>
-        </repository>
-    </repositories>
 
     <properties>
         <java.version>21</java.version>
