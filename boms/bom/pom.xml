@@ -18,7 +18,7 @@
 
 -->
 
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd" child.project.url.inherit.append.path="false">
     <modelVersion>4.0.0</modelVersion>
 
     <parent>
@@ -35,8 +35,37 @@
 
     <name>Grizzly BOM</name>
     <description>Grizzly Bill of Materials (BOM)</description>
-
     <url>https://eclipse-ee4j.github.io/glassfish-grizzly</url>
+
+    <organization>
+        <name>Eclipse Foundation - GlassFish Project</name>
+        <url>https://glassfish.org</url>
+    </organization>
+    <licenses>
+        <license>
+            <name>EPL-2.0</name>
+            <url>http://www.eclipse.org/legal/epl-2.0</url>
+        </license>
+    </licenses>
+    <mailingLists>
+        <mailingList>
+            <name>Mailing list: glassfish-dev</name>
+            <archive>glassfish-dev@eclipse.org</archive>
+        </mailingList>
+    </mailingLists>
+    <issueManagement>
+        <system>GitHub</system>
+        <url>https://github.com/eclipse-ee4j/grizzly/issues</url>
+    </issueManagement>
+
+    <scm child.scm.connection.inherit.append.path="false"
+     child.scm.developerConnection.inherit.append.path="false"
+     child.scm.url.inherit.append.path="false">
+        <connection>scm:git:https://github.com/eclipse-ee4j/glassfish-grizzly.git</connection>
+        <developerConnection>scm:git:git@github.com:eclipse-ee4j/glassfish-grizzly.git</developerConnection>
+        <url>https://github.com/eclipse-ee4j/glassfish-grizzly</url>
+        <tag>HEAD</tag>
+    </scm>
 
     <dependencyManagement>
         <dependencies>
