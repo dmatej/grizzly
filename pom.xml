@@ -24,7 +24,7 @@
     <parent>
         <groupId>org.glassfish.grizzly</groupId>
         <artifactId>grizzly-bom</artifactId>
-        <version>5.0.1-SNAPSHOT</version>
+        <version>5.0.1</version>
         <relativePath>boms/bom/pom.xml</relativePath>
     </parent>
 
@@ -97,7 +97,7 @@
         <gmbal.version>4.1.1</gmbal.version>
         <grizzly.npn.api.version>2.0.1</grizzly.npn.api.version>
         <osgi.version>8.0.0</osgi.version>
-        <release.arguments></release.arguments>
+        <release.arguments />
     </properties>
 
     <dependencyManagement>
