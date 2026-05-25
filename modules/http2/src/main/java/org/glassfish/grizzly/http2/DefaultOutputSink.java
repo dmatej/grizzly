@@ -254,6 +254,24 @@ class DefaultOutputSink implements StreamOutputSink {
             boolean isLast = httpContent != null && httpContent.isLast();
             final boolean isTrailer = HttpTrailer.isTrailer(httpContent);
 
+            // Interim (1xx) response such as 103 Early Hints: send a HEADERS frame on the stream without committing,
+            // so the final response can still follow. Headers are encoded with markSerialized=false (see
+            // EncoderUtils.encodeInterimResponseHeaders) so they are emitted again with the final response.
+            if (!httpHeader.isRequest()) {
+                final HttpResponsePacket response = (HttpResponsePacket) httpHeader;
+                if (response.isInterimResponse()) {
+                    http2Session.getDeflaterLock().lock();
+                    lockedByMe = true;
+                    headerFrames = http2Session.encodeInterimResponseAsHeaderFrames(ctx, response, stream.getId(), null, null);
+                    stream.onSndHeaders(false);
+                    response.interimResponseSent();
+                    unflushedWritesCounter.incrementAndGet();
+                    flushToConnectionOutputSink(headerFrames, completionHandler, messageCloner, false);
+                    LOGGER.finest("Early hints interim response has been sent.");
+                    return null;
+                }
+            }
+
             // If HTTP header hasn't been committed - commit it
             if (!httpHeader.isCommitted()) {
                 final boolean dontSendPayload = !httpHeader.isExpectContent()

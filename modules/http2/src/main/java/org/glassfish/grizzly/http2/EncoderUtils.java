@@ -44,9 +44,24 @@ class EncoderUtils extends EncoderDecoderUtilsBase {
     private static final String HTTP = "http";
     private static final String HTTPS = "https";
 
-    @SuppressWarnings("unchecked")
     static Buffer encodeResponseHeaders(final Http2Session http2Session, final HttpResponsePacket response, final Map<String, String> capture)
             throws IOException {
+        return encodeResponseHeaders(http2Session, response, response.getHttpStatus().getStatusCode(), true, capture);
+    }
+
+    /**
+     * Encodes an informational (1xx) interim response, such as <code>103 Early Hints</code>, using the response's
+     * {@link HttpResponsePacket#getInterimStatus() interim status}. The headers are not marked as serialized, so they
+     * are emitted again with the final response.
+     */
+    static Buffer encodeInterimResponseHeaders(final Http2Session http2Session, final HttpResponsePacket response,
+            final Map<String, String> capture) throws IOException {
+        return encodeResponseHeaders(http2Session, response, response.getInterimStatus().getStatusCode(), false, capture);
+    }
+
+    @SuppressWarnings("unchecked")
+    private static Buffer encodeResponseHeaders(final Http2Session http2Session, final HttpResponsePacket response,
+            final int statusCode, final boolean markSerialized, final Map<String, String> capture) throws IOException {
 
         assert http2Session.getDeflaterLock().isLocked();
 
@@ -60,12 +75,9 @@ class EncoderUtils extends EncoderDecoderUtilsBase {
 
         final HeadersEncoder encoder = http2Session.getHeadersEncoder();
 
-//        encoder.encodeHeader(Constants.STATUS_HEADER_BYTES,
-//                response.getHttpStatus().getStatusBytes(), false);
+        encoder.encodeHeader(STATUS_HEADER, String.valueOf(statusCode), capture);
 
-        encoder.encodeHeader(STATUS_HEADER, String.valueOf(response.getHttpStatus().getStatusCode()), capture);
-
-        encodeUserHeaders(headers, encoder, capture);
+        encodeUserHeaders(headers, encoder, markSerialized, capture);
 
         return encoder.flushHeaders();
     }
@@ -164,7 +176,7 @@ class EncoderUtils extends EncoderDecoderUtilsBase {
         }
         encoder.encodeHeader(PATH_HEADER, path, capture);
 
-        encodeUserHeaders(headers, encoder, capture);
+        encodeUserHeaders(headers, encoder, true, capture);
 
         return encoder.flushHeaders();
     }
@@ -185,13 +197,15 @@ class EncoderUtils extends EncoderDecoderUtilsBase {
     }
 
     @SuppressWarnings("unchecked")
-    private static void encodeUserHeaders(final MimeHeaders headers, final HeadersEncoder encoder, final Map<String, String> capture) throws IOException {
+    private static void encodeUserHeaders(final MimeHeaders headers, final HeadersEncoder encoder, final boolean markSerialized,
+            final Map<String, String> capture) throws IOException {
 
         final int mimeHeadersCount = headers.size();
 
         for (int i = 0; i < mimeHeadersCount; i++) {
 
-            if (!headers.setSerialized(i, true)) {
+            final boolean alreadySerialized = markSerialized ? headers.setSerialized(i, true) : headers.isSerialized(i);
+            if (!alreadySerialized) {
                 final String nameStr = nameToLowerCase(headers.getName(i));
                 final DataChunk value = headers.getValue(i);
                 if (!value.isNull()) {

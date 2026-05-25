@@ -1189,6 +1189,25 @@ public class Response {
     }
 
     /**
+     * Send a <code>103 Early Hints</code> interim response using the headers currently set on this response.
+     * <p>
+     * This method does not commit the response and may be called multiple times before the response is committed. It has
+     * no effect if the response is already committed or if the request protocol is neither HTTP/1.1 nor HTTP/2 (interim
+     * responses are not supported by HTTP/1.0 and earlier).
+     *
+     * @exception java.io.IOException if an input/output error occurs
+     */
+    public void sendEarlyHints() throws IOException {
+        final Protocol protocol = request.getProtocol();
+        if (isCommitted() || protocol != Protocol.HTTP_1_1 && protocol != Protocol.HTTP_2_0) {
+            return;
+        }
+
+        response.setInterimStatus(HttpStatus.EARLY_HINTS_103);
+        outputBuffer.writeInterimResponse();
+    }
+
+    /**
      * Send an error response with the specified status and a default message.
      *
      * @param status HTTP status code to send

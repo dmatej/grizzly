@@ -44,6 +44,7 @@ import org.glassfish.grizzly.http.util.Constants;
 import org.glassfish.grizzly.http.util.CookieHeaderParser;
 import org.glassfish.grizzly.http.util.DataChunk;
 import org.glassfish.grizzly.http.util.Header;
+import org.glassfish.grizzly.http.util.HttpStatus;
 import org.glassfish.grizzly.http.util.MimeHeaders;
 import org.glassfish.grizzly.memory.Buffers;
 import org.glassfish.grizzly.memory.CompositeBuffer;
@@ -1510,6 +1511,33 @@ public abstract class HttpCodecFilter extends HttpBaseFilter implements Monitori
                     response.acknowledged();
                     return encodedBuffer; // DO NOT MARK COMMITTED
                 }
+                if (response.isInterimResponse()) {
+                    // Interim (1xx) responses are only emitted for HTTP/1.1; the caller guards on the request protocol,
+                    // so the response protocol is HTTP/1.1 here.
+                    final HttpStatus interimStatus = response.getInterimStatus();
+                    encodedBuffer = memoryManager.allocateAtLeast(2048);
+                    encodedBuffer = put(memoryManager, encodedBuffer, response.getProtocol().getProtocolBytes());
+                    encodedBuffer = put(memoryManager, encodedBuffer, Constants.SP);
+                    encodedBuffer = put(memoryManager, encodedBuffer, interimStatus.getStatusBytes());
+                    encodedBuffer = put(memoryManager, encodedBuffer, Constants.SP);
+                    encodedBuffer = put(memoryManager, encodedBuffer, interimStatus.getReasonPhraseBytes());
+                    encodedBuffer = put(memoryManager, encodedBuffer, CRLF_BYTES);
+                    onInitialLineEncoded(httpHeader, ctx);
+
+                    // Serialize the headers without marking them as serialized, so that they are still emitted with the
+                    // final response.
+                    encodedBuffer = encodeMimeHeaders(memoryManager, encodedBuffer, response.getHeaders(), response.getTempHeaderEncodingBuffer(),
+                            false);
+                    onHttpHeadersEncoded(httpHeader, ctx);
+                    encodedBuffer = put(memoryManager, encodedBuffer, CRLF_BYTES);
+                    encodedBuffer.trim();
+                    encodedBuffer.allowBufferDispose(true);
+
+                    HttpProbeNotifier.notifyHeaderSerialize(this, connection, httpHeader, encodedBuffer);
+
+                    response.interimResponseSent();
+                    return encodedBuffer; // DO NOT MARK COMMITTED
+                }
             }
 
             if (httpHeader.isExpectContent()) {
@@ -1618,10 +1646,16 @@ public abstract class HttpCodecFilter extends HttpBaseFilter implements Monitori
 
     protected static Buffer encodeMimeHeaders(final MemoryManager memoryManager, Buffer buffer, final MimeHeaders mimeHeaders,
             final byte[] tempEncodingBuffer) {
+        return encodeMimeHeaders(memoryManager, buffer, mimeHeaders, tempEncodingBuffer, true);
+    }
+
+    protected static Buffer encodeMimeHeaders(final MemoryManager memoryManager, Buffer buffer, final MimeHeaders mimeHeaders,
+            final byte[] tempEncodingBuffer, final boolean markSerialized) {
         final int mimeHeadersNum = mimeHeaders.size();
 
         for (int i = 0; i < mimeHeadersNum; i++) {
-            if (!mimeHeaders.setSerialized(i, true)) {
+            final boolean alreadySerialized = markSerialized ? mimeHeaders.setSerialized(i, true) : mimeHeaders.isSerialized(i);
+            if (!alreadySerialized) {
                 final DataChunk value = mimeHeaders.getValue(i);
                 if (!value.isNull()) {
                     buffer = encodeMimeHeader(memoryManager, buffer, mimeHeaders.getName(i), value, tempEncodingBuffer, true);

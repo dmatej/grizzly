@@ -784,6 +784,28 @@ public class Http2Session {
     }
 
     /**
+     * Encodes an informational (1xx) interim response, such as <code>103 Early Hints</code>, as HTTP/2 HEADERS frames.
+     * The frames never carry END_STREAM, so the final response can still be sent on the same stream afterwards.
+     *
+     * @param ctx the current {@link FilterChainContext}
+     * @param response the {@link HttpResponsePacket} whose interim status and headers are to be encoded
+     * @param streamId the stream associated with this response
+     * @param toList the target {@link List}, to which the frames will be serialized
+     * @param capture optional map collecting the encoded headers for logging
+     *
+     * @return the HTTP2 header frames sequence
+     *
+     * @throws IOException if an error occurs encoding the headers
+     */
+    protected List<Http2Frame> encodeInterimResponseAsHeaderFrames(final FilterChainContext ctx, final HttpResponsePacket response,
+            final int streamId, final List<Http2Frame> toList, final Map<String, String> capture) throws IOException {
+        final Buffer compressedHeaders = EncoderUtils.encodeInterimResponseHeaders(this, response, capture);
+        final List<Http2Frame> headerFrames = bufferToHeaderFrames(streamId, compressedHeaders, false, toList);
+        handlerFilter.onHttpHeadersEncoded(response, ctx);
+        return headerFrames;
+    }
+
+    /**
      * Encodes the {@link Map} of header values into header frames to be sent as trailer headers.
      *
      * @param streamId the stream associated with this request

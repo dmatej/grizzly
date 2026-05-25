@@ -66,6 +66,14 @@ public abstract class HttpResponsePacket extends HttpHeader {
     private boolean acknowledgment;
 
     /**
+     * Status of the informational (1xx) interim response (e.g. {@link HttpStatus#EARLY_HINTS_103}) that is pending
+     * serialization. Held separately from {@link #httpStatus} so that serializing an interim response does not disturb
+     * the status of the final response. Non-{@code null} only between the moment an interim response is requested and
+     * the moment it has been serialized.
+     */
+    private HttpStatus interimStatus;
+
+    /**
      * Do we allow custom reason phrase.
      */
     private boolean allowCustomReasonPhrase = true;
@@ -254,6 +262,38 @@ public abstract class HttpResponsePacket extends HttpHeader {
         reasonPhraseC.recycle();
     }
 
+    /**
+     * @return <code>true</code> if an informational (1xx) interim response is pending serialization for this packet.
+     */
+    public boolean isInterimResponse() {
+        return interimStatus != null;
+    }
+
+    /**
+     * @return the status of the interim response pending serialization, or <code>null</code> if none is pending.
+     */
+    public HttpStatus getInterimStatus() {
+        return interimStatus;
+    }
+
+    /**
+     * Request the serialization of an informational (1xx) interim response, such as
+     * {@link HttpStatus#EARLY_HINTS_103}, using the headers currently set on this packet. This does not affect the
+     * status, headers or committed state of the final response.
+     *
+     * @param interimStatus the 1xx status of the interim response to serialize.
+     */
+    public void setInterimStatus(final HttpStatus interimStatus) {
+        this.interimStatus = interimStatus;
+    }
+
+    /**
+     * Mark the pending interim response as having been serialized.
+     */
+    public void interimResponseSent() {
+        interimStatus = null;
+    }
+
     // --------------------
 
     /**
@@ -262,6 +302,7 @@ public abstract class HttpResponsePacket extends HttpHeader {
     @Override
     protected void reset() {
         httpStatus = null;
+        interimStatus = null;
         acknowledgment = false;
         allowCustomReasonPhrase = true;
         isHtmlEncodingCustomReasonPhrase = true;

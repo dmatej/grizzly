@@ -376,6 +376,19 @@ public class OutputBuffer {
 
     }
 
+    /**
+     * Write an informational (1xx) interim response, such as <code>103 Early Hints</code>, using the headers currently
+     * set on the response. The interim status must have been set on the response packet before invoking this method.
+     * This does not commit the response.
+     *
+     * @throws IOException if an error occurs writing the interim response.
+     */
+    public void writeInterimResponse() throws IOException {
+
+        ctx.write(outputHeader, IS_BLOCKING);
+
+    }
+
     // ---------------------------------------------------- Writer-Based Methods
 
     public void writeChar(int c) throws IOException {
