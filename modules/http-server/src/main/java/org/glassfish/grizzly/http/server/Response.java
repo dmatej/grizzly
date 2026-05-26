@@ -270,7 +270,7 @@ public class Response {
             throw new IllegalStateException("Response has already been committed.");
         }
         final Protocol protocol = request.getProtocol();
-        if (protocol.equals(Protocol.HTTP_0_9) || protocol.equals(Protocol.HTTP_1_0)) {
+        if (!protocol.isAtLeast(Protocol.HTTP_1_1)) {
             throw new IllegalStateException("Trailers not supported by response protocol version " + protocol);
         }
         if (protocol.equals(Protocol.HTTP_1_1)) {
@@ -1198,8 +1198,7 @@ public class Response {
      * @exception java.io.IOException if an input/output error occurs
      */
     public void sendEarlyHints() throws IOException {
-        final Protocol protocol = request.getProtocol();
-        if (isCommitted() || protocol != Protocol.HTTP_1_1 && protocol != Protocol.HTTP_2_0) {
+        if (isCommitted() || !request.getProtocol().isAtLeast(Protocol.HTTP_1_1)) {
             return;
         }
 
