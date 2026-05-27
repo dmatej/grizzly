@@ -1183,9 +1183,8 @@ public class Response {
             return;
         }
 
-        response.setAcknowledgement(true);
-        outputBuffer.acknowledge();
-
+        response.setInterimStatus(HttpStatus.CONINTUE_100);
+        outputBuffer.writeInterimResponse();
     }
 
     /**

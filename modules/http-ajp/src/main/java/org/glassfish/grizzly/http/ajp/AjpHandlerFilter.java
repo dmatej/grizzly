@@ -210,12 +210,6 @@ public class AjpHandlerFilter extends BaseFilter {
         Buffer encodedBuffer = null;
         if (!httpHeader.isCommitted()) {
             encodedBuffer = AjpMessageUtils.encodeHeaders(memoryManager, httpResponsePacket);
-            if (httpResponsePacket.isAcknowledgement()) {
-                encodedBuffer.trim();
-
-                httpResponsePacket.acknowledged();
-                return encodedBuffer; // DO NOT MARK COMMITTED
-            }
             if (httpResponsePacket.isInterimResponse()) {
                 encodedBuffer.trim();
 

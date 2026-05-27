@@ -294,19 +294,6 @@ class DefaultOutputSink implements StreamOutputSink {
                 }
                 stream.onSndHeaders(dontSendPayload);
 
-                // 100-Continue block
-                if (!httpHeader.isRequest()) {
-                    HttpResponsePacket response = (HttpResponsePacket) httpHeader;
-                    if (response.isAcknowledgement()) {
-                        response.acknowledged();
-                        response.getHeaders().clear();
-                        unflushedWritesCounter.incrementAndGet();
-                        flushToConnectionOutputSink(headerFrames, completionHandler, messageCloner, false);
-                        LOGGER.finest("Acknowledgement has been sent.");
-                        return null;
-                    }
-                }
-
                 httpHeader.setCommitted(true);
 
                 if (dontSendPayload || httpContent == null) {

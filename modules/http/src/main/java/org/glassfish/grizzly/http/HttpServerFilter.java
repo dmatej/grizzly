@@ -748,7 +748,10 @@ public class HttpServerFilter extends HttpCodecFilter {
 
         boolean wasContentAlreadyEncoded = false;
         final HttpResponsePacket response = (HttpResponsePacket) header;
-        if (!response.isCommitted()) {
+        // prepareResponse mutates the headers map (Date, Content-Type, Content-Length, ...) for the final response and
+        // must be skipped while an interim (1xx) response is pending serialization — those mutations describe the final
+        // response and would otherwise leak into the interim packet on the wire.
+        if (!response.isCommitted() && !response.isInterimResponse()) {
             final HttpContent encodedHttpContent = prepareResponse(ctx, response.getRequest(), response, content);
 
             if (encodedHttpContent != null) {
@@ -1109,8 +1112,7 @@ public class HttpServerFilter extends HttpCodecFilter {
         if ("100-continue".equalsIgnoreCase(request.getHeader(Header.Expect))) {
             // 100-continue is intercepted and acknowledged with a response line with the status 100 in Chunked Transfer Coding.
             // The request processing will continue after acknowledgment of the expectation.
-            response.setStatus(HttpStatus.CONINTUE_100);
-            response.setAcknowledgement(true);
+            response.setInterimStatus(HttpStatus.CONINTUE_100);
             final Buffer resBuf = encodeHttpPacket(ctx, response);
             if (resBuf != null) {
                 HttpProbeNotifier.notifyDataSent(this, ctx.getConnection(), resBuf);

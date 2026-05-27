@@ -1507,20 +1507,6 @@ public abstract class HttpCodecFilter extends HttpBaseFilter implements Monitori
 
             if (!httpHeader.isRequest()) {
                 final HttpResponsePacket response = (HttpResponsePacket) httpHeader;
-                if (response.isAcknowledgement()) {
-                    encodedBuffer = memoryManager.allocate(128);
-                    encodedBuffer = encodeInitialLine(httpHeader, encodedBuffer, memoryManager);
-                    encodedBuffer = put(memoryManager, encodedBuffer, CRLF_BYTES);
-                    encodedBuffer = put(memoryManager, encodedBuffer, CRLF_BYTES);
-                    onInitialLineEncoded(httpHeader, ctx);
-                    encodedBuffer.trim();
-                    encodedBuffer.allowBufferDispose(true);
-
-                    HttpProbeNotifier.notifyHeaderSerialize(this, connection, httpHeader, encodedBuffer);
-
-                    response.acknowledged();
-                    return encodedBuffer; // DO NOT MARK COMMITTED
-                }
                 if (response.isInterimResponse()) {
                     // Interim (1xx) responses are only emitted for HTTP/1.1; the caller guards on the request protocol,
                     // so the response protocol is HTTP/1.1 here.

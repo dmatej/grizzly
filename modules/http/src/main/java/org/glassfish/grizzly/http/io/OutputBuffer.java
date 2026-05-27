@@ -365,28 +365,15 @@ public class OutputBuffer {
     }
 
     /**
-     * Acknowledge a HTTP <code>Expect</code> header. The response status code and reason phrase should be set before
-     * invoking this method.
-     *
-     * @throws IOException if an error occurs writing the acknowledgment.
-     */
-    public void acknowledge() throws IOException {
-
-        ctx.write(outputHeader, IS_BLOCKING);
-
-    }
-
-    /**
-     * Write an informational (1xx) interim response, such as <code>103 Early Hints</code>, using the headers currently
-     * set on the response. The interim status must have been set on the response packet before invoking this method.
-     * This does not commit the response.
+     * Flush a pending informational (1xx) interim response — either a 100-Continue acknowledgement of an
+     * <code>Expect</code> header, or any other interim status such as 103 Early Hints — without committing the response.
+     * The interim status must have been set on the response packet via
+     * {@link org.glassfish.grizzly.http.HttpResponsePacket#setInterimStatus} before invoking this method.
      *
      * @throws IOException if an error occurs writing the interim response.
      */
     public void writeInterimResponse() throws IOException {
-
         ctx.write(outputHeader, IS_BLOCKING);
-
     }
 
     // ---------------------------------------------------- Writer-Based Methods

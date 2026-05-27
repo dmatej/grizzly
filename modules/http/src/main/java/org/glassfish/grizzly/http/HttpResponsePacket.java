@@ -61,15 +61,10 @@ public abstract class HttpResponsePacket extends HttpHeader {
     private final DataChunk reasonPhraseC = DataChunk.newInstance();
 
     /**
-     * Does this HttpResponsePacket represent an acknowledgment to an Expect header.
-     */
-    private boolean acknowledgment;
-
-    /**
-     * Status of the informational (1xx) interim response (e.g. {@link HttpStatus#EARLY_HINTS_103}) that is pending
-     * serialization. Held separately from {@link #httpStatus} so that serializing an interim response does not disturb
-     * the status of the final response. Non-{@code null} only between the moment an interim response is requested and
-     * the moment it has been serialized.
+     * Status of the informational (1xx) interim response (e.g. {@link HttpStatus#EARLY_HINTS_103} or
+     * {@link HttpStatus#CONINTUE_100}) that is pending serialization. Held separately from {@link #httpStatus} so that
+     * serializing an interim response does not disturb the status of the final response. Non-{@code null} only between
+     * the moment an interim response is requested and the moment it has been serialized.
      */
     private HttpStatus interimStatus;
 
@@ -236,33 +231,6 @@ public abstract class HttpResponsePacket extends HttpHeader {
     }
 
     /**
-     * @return <code>true</code> if this response packet is intended as an acknowledgment to an expectation from a client
-     * request.
-     */
-    public boolean isAcknowledgement() {
-        return acknowledgment;
-    }
-
-    /**
-     * Mark this packet as an acknowledgment to a client expectation.
-     *
-     * @param acknowledgement <code>true</code> if this packet is an acknowledgment to a client expectation.
-     */
-    public void setAcknowledgement(final boolean acknowledgement) {
-        this.acknowledgment = acknowledgement;
-    }
-
-    /**
-     * Mark this packet as having been acknowledged.
-     */
-    public void acknowledged() {
-        request.requiresAcknowledgement(false);
-        acknowledgment = false;
-        httpStatus = null;
-        reasonPhraseC.recycle();
-    }
-
-    /**
      * @return <code>true</code> if an informational (1xx) interim response is pending serialization for this packet.
      */
     public boolean isInterimResponse() {
@@ -288,10 +256,16 @@ public abstract class HttpResponsePacket extends HttpHeader {
     }
 
     /**
-     * Mark the pending interim response as having been serialized.
+     * Mark the pending interim response as having been serialized. If the interim status was {@code 100 Continue}, the
+     * associated request's expectation flag is also cleared so that subsequent processing no longer treats the request
+     * as awaiting acknowledgement.
      */
     public void interimResponseSent() {
+        final boolean wasContinue = interimStatus != null && interimStatus.getStatusCode() == HttpStatus.CONINTUE_100.getStatusCode();
         interimStatus = null;
+        if (wasContinue) {
+            request.requiresAcknowledgement(false);
+        }
     }
 
     // --------------------
@@ -303,7 +277,6 @@ public abstract class HttpResponsePacket extends HttpHeader {
     protected void reset() {
         httpStatus = null;
         interimStatus = null;
-        acknowledgment = false;
         allowCustomReasonPhrase = true;
         isHtmlEncodingCustomReasonPhrase = true;
         reasonPhraseC.recycle();

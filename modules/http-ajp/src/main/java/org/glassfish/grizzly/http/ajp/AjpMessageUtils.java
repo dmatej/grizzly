@@ -387,14 +387,11 @@ final class AjpMessageUtils {
             encodedBuffer = putBytes(mm, encodedBuffer, status.getReasonPhraseBytes());
         }
 
-        if (httpResponsePacket.isAcknowledgement()) {
-            // If it's acknoledgment packet - don't encode the headers
-            // Serialize 0 num_headers
-            encodedBuffer = putShort(mm, encodedBuffer, 0);
-        } else if (isInterim) {
-            // Interim (1xx) responses carry the currently-set headers as-is. Content-Type, Content-Language and
-            // Content-Length are deliberately not auto-injected here — they describe the final response, not the interim
-            // one, and must remain available for the SEND_HEADERS packet that follows.
+        if (isInterim) {
+            // Interim (1xx) responses carry the currently-set headers as-is — for 100-Continue this is typically an
+            // empty map; for 103 Early Hints it carries the Link headers set by the application. Content-Type,
+            // Content-Language and Content-Length are deliberately not auto-injected here — they describe the final
+            // response, not the interim one, and must remain available for the SEND_HEADERS packet that follows.
             final MimeHeaders headers = httpResponsePacket.getHeaders();
             final int numHeaders = headers.size();
             encodedBuffer = putShort(mm, encodedBuffer, numHeaders);
