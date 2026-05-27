@@ -670,12 +670,18 @@ public class HttpServerFilter extends HttpCodecFilter {
         }
 
         if (request.requiresAcknowledgement()) {
-            if (!isHttp11 || hasReadyContent) {
-                // if we have any request content, we can ignore the Expect request
+            if (!protocol.isAtLeast(Protocol.HTTP_1_1) || hasReadyContent) {
+                // HTTP/1.0 and earlier do not define the Expect mechanism, and if we have already buffered request
+                // content there is nothing left to wait for.
                 request.requiresAcknowledgement(false);
-            } else if (request.isChunked()) {
+            } else if (protocol == Protocol.HTTP_1_1 && request.isChunked()) {
+                // HTTP/1.1 chunked: acknowledge here using the HTTP/1.1 encoder.
                 sendAcknowledgment(request, response, ctx);
             }
+            // HTTP/2 currently does not reach this callback (Http2BaseFilter#onHttpHeaderParsed is a no-op stub) — its
+            // requiresAcknowledgement bit is set in DecoderUtils and handled by the app-level flow via
+            // HttpHandler.doHandle -> Response.sendAcknowledgement. The else branch is therefore intentionally left
+            // open so any future ≥ HTTP/1.1 protocol routed through this codec callback inherits the same semantics.
         }
     }
 
