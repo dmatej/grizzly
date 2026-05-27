@@ -917,20 +917,28 @@ public class HttpServerFilter extends HttpCodecFilter {
     @Override
     Buffer encodeInitialLine(HttpPacket httpPacket, Buffer output, MemoryManager memoryManager) {
         final HttpResponsePacket httpResponse = (HttpResponsePacket) httpPacket;
+        return encodeInitialLine(httpResponse, httpResponse.getHttpStatus(), output, memoryManager);
+    }
+
+    @Override
+    Buffer encodeInitialLine(HttpPacket httpPacket, HttpStatus status, Buffer output, MemoryManager memoryManager) {
+        return encodeInitialLine((HttpResponsePacket) httpPacket, status, output, memoryManager);
+    }
+
+    private Buffer encodeInitialLine(HttpResponsePacket httpResponse, HttpStatus status, Buffer output, MemoryManager memoryManager) {
         output = put(memoryManager, output, httpResponse.getProtocol().getProtocolBytes());
         output = put(memoryManager, output, Constants.SP);
-        output = put(memoryManager, output, httpResponse.getHttpStatus().getStatusBytes());
+        output = put(memoryManager, output, status.getStatusBytes());
         output = put(memoryManager, output, Constants.SP);
-        if (httpResponse.isCustomReasonPhraseSet()) {
-
+        // CustomReasonPhrase is set on the response for the final status only; an interim status carried via the
+        // {@code status} override always uses its registered reason phrase.
+        if (status == httpResponse.getHttpStatus() && httpResponse.isCustomReasonPhraseSet()) {
             final DataChunk customReasonPhrase = httpResponse.isHtmlEncodingCustomReasonPhrase() ? HttpUtils.filter(httpResponse.getReasonPhraseDC())
                     : HttpUtils.filterNonPrintableCharacters(httpResponse.getReasonPhraseDC());
-
             output = put(memoryManager, output, httpResponse.getTempHeaderEncodingBuffer(), customReasonPhrase);
         } else {
-            output = put(memoryManager, output, httpResponse.getHttpStatus().getReasonPhraseBytes());
+            output = put(memoryManager, output, status.getReasonPhraseBytes());
         }
-
         return output;
     }
 

@@ -179,6 +179,16 @@ public abstract class HttpCodecFilter extends HttpBaseFilter implements Monitori
     abstract Buffer encodeInitialLine(HttpPacket httpPacket, Buffer output, MemoryManager memoryManager);
 
     /**
+     * Variant of {@link #encodeInitialLine(HttpPacket, Buffer, MemoryManager)} that overrides the status used in the
+     * status line, for serializing interim (1xx) responses whose status differs from the final response status. The
+     * default implementation ignores {@code status} and delegates to the single-arg form; only the server-side filter
+     * needs to honour the override.
+     */
+    Buffer encodeInitialLine(HttpPacket httpPacket, HttpStatus status, Buffer output, MemoryManager memoryManager) {
+        return encodeInitialLine(httpPacket, output, memoryManager);
+    }
+
+    /**
      * Callback method, called when {@link HttpPacket} parsing has been completed.
      *
      * @param httpHeader {@link HttpHeader}, which represents parsed HTTP packet header
@@ -1514,13 +1524,8 @@ public abstract class HttpCodecFilter extends HttpBaseFilter implements Monitori
                 if (response.isInterimResponse()) {
                     // Interim (1xx) responses are only emitted for HTTP/1.1; the caller guards on the request protocol,
                     // so the response protocol is HTTP/1.1 here.
-                    final HttpStatus interimStatus = response.getInterimStatus();
                     encodedBuffer = memoryManager.allocateAtLeast(2048);
-                    encodedBuffer = put(memoryManager, encodedBuffer, response.getProtocol().getProtocolBytes());
-                    encodedBuffer = put(memoryManager, encodedBuffer, Constants.SP);
-                    encodedBuffer = put(memoryManager, encodedBuffer, interimStatus.getStatusBytes());
-                    encodedBuffer = put(memoryManager, encodedBuffer, Constants.SP);
-                    encodedBuffer = put(memoryManager, encodedBuffer, interimStatus.getReasonPhraseBytes());
+                    encodedBuffer = encodeInitialLine(httpHeader, response.getInterimStatus(), encodedBuffer, memoryManager);
                     encodedBuffer = put(memoryManager, encodedBuffer, CRLF_BYTES);
                     onInitialLineEncoded(httpHeader, ctx);
 
