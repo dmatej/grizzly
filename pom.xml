@@ -91,7 +91,7 @@
     <properties>
         <java.version>21</java.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <servlet-version>6.1.0</servlet-version>
+        <servlet-version>6.2.0-M2</servlet-version>
         <maven-plugin.version>1.0.0</maven-plugin.version>
         <cobertura.version>2.4</cobertura.version>
         <gmbal.version>4.1.1</gmbal.version>
