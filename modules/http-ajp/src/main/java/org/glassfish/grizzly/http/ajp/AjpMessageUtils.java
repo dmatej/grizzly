@@ -29,6 +29,7 @@ import org.glassfish.grizzly.http.util.Ascii;
 import org.glassfish.grizzly.http.util.BufferChunk;
 import org.glassfish.grizzly.http.util.DataChunk;
 import org.glassfish.grizzly.http.util.HexUtils;
+import org.glassfish.grizzly.http.util.HttpStatus;
 import org.glassfish.grizzly.http.util.HttpUtils;
 import org.glassfish.grizzly.http.util.MimeHeaders;
 import org.glassfish.grizzly.memory.Buffers;
@@ -368,24 +369,39 @@ final class AjpMessageUtils {
     }
 
     public static Buffer encodeHeaders(final MemoryManager mm, final HttpResponsePacket httpResponsePacket) {
+        final boolean isInterim = httpResponsePacket.isInterimResponse();
+        final HttpStatus status = isInterim ? httpResponsePacket.getInterimStatus() : httpResponsePacket.getHttpStatus();
+
         Buffer encodedBuffer = mm.allocate(4096);
         int startPos = encodedBuffer.position();
         // Skip 4 bytes for the Ajp header
         encodedBuffer.position(startPos + 4);
 
         encodedBuffer.put(AjpConstants.JK_AJP13_SEND_HEADERS);
-        encodedBuffer.putShort((short) httpResponsePacket.getStatus());
+        encodedBuffer.putShort((short) status.getStatusCode());
         final byte[] tempBuffer = httpResponsePacket.getTempHeaderEncodingBuffer();
-        if (httpResponsePacket.isCustomReasonPhraseSet()) {
+        // CustomReasonPhrase belongs to the final response, never to an interim status.
+        if (!isInterim && httpResponsePacket.isCustomReasonPhraseSet()) {
             encodedBuffer = putBytes(mm, encodedBuffer, HttpUtils.filter(httpResponsePacket.getReasonPhraseDC()), tempBuffer);
         } else {
-            encodedBuffer = putBytes(mm, encodedBuffer, httpResponsePacket.getHttpStatus().getReasonPhraseBytes());
+            encodedBuffer = putBytes(mm, encodedBuffer, status.getReasonPhraseBytes());
         }
 
         if (httpResponsePacket.isAcknowledgement()) {
             // If it's acknoledgment packet - don't encode the headers
             // Serialize 0 num_headers
             encodedBuffer = putShort(mm, encodedBuffer, 0);
+        } else if (isInterim) {
+            // Interim (1xx) responses carry the currently-set headers as-is. Content-Type, Content-Language and
+            // Content-Length are deliberately not auto-injected here — they describe the final response, not the interim
+            // one, and must remain available for the SEND_HEADERS packet that follows.
+            final MimeHeaders headers = httpResponsePacket.getHeaders();
+            final int numHeaders = headers.size();
+            encodedBuffer = putShort(mm, encodedBuffer, numHeaders);
+            for (int i = 0; i < numHeaders; i++) {
+                encodedBuffer = putBytes(mm, encodedBuffer, headers.getName(i), tempBuffer);
+                encodedBuffer = putBytes(mm, encodedBuffer, headers.getValue(i), tempBuffer);
+            }
         } else {
             final MimeHeaders headers = httpResponsePacket.getHeaders();
             final String contentType = httpResponsePacket.getContentType();

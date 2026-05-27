@@ -216,6 +216,12 @@ public class AjpHandlerFilter extends BaseFilter {
                 httpResponsePacket.acknowledged();
                 return encodedBuffer; // DO NOT MARK COMMITTED
             }
+            if (httpResponsePacket.isInterimResponse()) {
+                encodedBuffer.trim();
+
+                httpResponsePacket.interimResponseSent();
+                return encodedBuffer; // DO NOT MARK COMMITTED
+            }
 
             httpHeader.setCommitted(true);
         }
