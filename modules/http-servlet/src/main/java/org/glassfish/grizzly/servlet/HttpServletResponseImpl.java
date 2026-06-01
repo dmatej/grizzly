@@ -478,11 +478,9 @@ public class HttpServletResponseImpl implements HttpServletResponse, Holders.Res
     }
 
     /**
-     * {@inheritDoc}
-     *
-     * @since Servlet 6.2
+     * Sends a 103 Early Hints interim response. The {@code @Override} annotation is intentionally omitted; it should be
+     * added once this project targets Servlet 6.2, which introduces {@code HttpServletResponse#sendEarlyHints()}.
      */
-    @Override
     public void sendEarlyHints() {
         try {
             response.sendEarlyHints();
