@@ -354,7 +354,6 @@ public abstract class HttpHandler {
     protected boolean sendAcknowledgment(final Request request, final Response response) throws IOException {
 
         if ("100-continue".equalsIgnoreCase(request.getHeader(Header.Expect))) {
-            response.setStatus(HttpStatus.CONINTUE_100);
             response.sendAcknowledgement();
             return true;
         } else {

@@ -136,4 +136,12 @@ public enum Protocol {
     public boolean equals(final DataChunk protocolC) {
         return protocolC != null && !protocolC.isNull() && protocolC.equals(protocolBytes);
     }
+
+    /**
+     * Returns {@code true} if this protocol version is greater than or equal to the given one. Relies on the natural
+     * declaration order of the enum constants, which is ascending by HTTP version.
+     */
+    public boolean isAtLeast(final Protocol other) {
+        return compareTo(other) >= 0;
+    }
 }

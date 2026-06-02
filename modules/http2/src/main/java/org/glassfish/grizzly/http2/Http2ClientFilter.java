@@ -517,39 +517,83 @@ public class Http2ClientFilter extends Http2BaseFilter {
 
         bind(request, response);
 
-        stream.onRcvHeaders(isEOS);
-        final HttpContent content;
         final Map<String, String> capture = NetLogger.isActive() ? new LinkedHashMap<>() : null;
-        if (stream.getInboundHeaderFramesCounter() == 1) {
+
+        // Until the final response arrives, a HEADERS block is a response header block: either an interim (1xx)
+        // response such as 103 Early Hints, or the final response itself. Interim responses precede the final one,
+        // never carry END_STREAM, and must not advance the stream's header/trailer state - otherwise the following
+        // final response would be mistaken for trailers. They are still decoded so the HPACK state stays in sync.
+        if (stream.getInboundHeaderFramesCounter() == 0) {
+            DecoderUtils.decodeResponseHeaders(http2Session, response, capture);
+            NetLogger.log(Context.RX, http2Session, headersFrame, capture);
+
+            if (isInterimResponse(response)) {
+                final HttpResponsePacket interimResponse = copyInterimResponse(request, response);
+                // Reuse the shared response packet for the still-to-come final response.
+                response.getHeaders().clear();
+                onHttpHeadersParsed(interimResponse, context);
+                sendUpstream(http2Session, stream, interimResponse.httpContentBuilder().content(Buffers.EMPTY_BUFFER).last(false).build());
+                return;
+            }
+
+            stream.onRcvHeaders(isEOS);
             if (isEOS) {
                 response.setExpectContent(false);
                 stream.inputBuffer.terminate(IN_FIN_TERMINATION);
             }
-            DecoderUtils.decodeResponseHeaders(http2Session, response, capture);
             onHttpHeadersParsed(response, context);
             response.getHeaders().mark();
-            content = response.httpContentBuilder().content(Buffers.EMPTY_BUFFER).last(isEOS).build();
-        } else {
-            DecoderUtils.decodeTrailerHeaders(http2Session, response, capture);
-            final HttpTrailer trailer = response.httpTrailerBuilder().content(Buffers.EMPTY_BUFFER).last(isEOS).build();
-            final MimeHeaders mimeHeaders = response.getHeaders();
-            if (mimeHeaders.trailerSize() > 0) {
-                for (final String name : mimeHeaders.trailerNames()) {
-                    trailer.addHeader(name, mimeHeaders.getHeader(name));
-                }
+            final HttpContent content = response.httpContentBuilder().content(Buffers.EMPTY_BUFFER).last(isEOS).build();
+            if (isEOS) {
+                onHttpPacketParsed(response, context);
             }
-            content = trailer;
-
-            stream.flushInputData();
-            // stream.inputBuffer.terminate(IN_FIN_TERMINATION);
+            sendUpstream(http2Session, stream, content);
+            return;
         }
+
+        // The final response was already received, so this block carries trailers.
+        stream.onRcvHeaders(isEOS);
+        DecoderUtils.decodeTrailerHeaders(http2Session, response, capture);
+        final HttpTrailer trailer = response.httpTrailerBuilder().content(Buffers.EMPTY_BUFFER).last(isEOS).build();
+        final MimeHeaders mimeHeaders = response.getHeaders();
+        if (mimeHeaders.trailerSize() > 0) {
+            for (final String name : mimeHeaders.trailerNames()) {
+                trailer.addHeader(name, mimeHeaders.getHeader(name));
+            }
+        }
+        stream.flushInputData();
         NetLogger.log(Context.RX, http2Session, headersFrame, capture);
 
         if (isEOS) {
             onHttpPacketParsed(response, context);
         }
 
-        sendUpstream(http2Session, stream, content);
+        sendUpstream(http2Session, stream, trailer);
+    }
+
+    private static boolean isInterimResponse(final HttpResponsePacket response) {
+        final int status = response.getStatus();
+        return status >= HttpStatus.CONINTUE_100.getStatusCode() && status < HttpStatus.OK_200.getStatusCode();
+    }
+
+    /**
+     * Creates a standalone copy of an interim (1xx) response so it can be delivered upstream while the shared response
+     * packet is reused for the final response. The copy is linked to the request (so it can resolve its processing
+     * state) without replacing the request's response binding.
+     */
+    private static HttpResponsePacket copyInterimResponse(final HttpRequestPacket request, final HttpResponsePacket source) {
+        final Http2Response interimResponse = Http2Response.create();
+        interimResponse.setRequest(request);
+        interimResponse.setProtocol(Protocol.HTTP_2_0);
+        interimResponse.setStatus(source.getHttpStatus());
+
+        final MimeHeaders sourceHeaders = source.getHeaders();
+        final MimeHeaders interimHeaders = interimResponse.getHeaders();
+        for (int i = 0, size = sourceHeaders.size(); i < size; i++) {
+            interimHeaders.addValue(sourceHeaders.getName(i).toString()).setString(sourceHeaders.getValue(i).toString());
+        }
+
+        return interimResponse;
     }
 
     @SuppressWarnings("DuplicateThrows")

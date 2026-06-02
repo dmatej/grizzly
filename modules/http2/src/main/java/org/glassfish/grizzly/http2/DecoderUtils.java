@@ -230,6 +230,7 @@ class DecoderUtils extends EncoderDecoderUtilsBase {
 
         case "expect": {
             ((Http2Request) httpHeader).requiresAcknowledgement(true);
+            return;
         }
 
         case "connection": {
@@ -240,6 +241,7 @@ class DecoderUtils extends EncoderDecoderUtilsBase {
             if (!"trailers".equals(value)) {
                 throw new HeaderDecodingException(ErrorCode.PROTOCOL_ERROR, ErrorType.STREAM, "TE header only allowed a value of trailers.");
             }
+            return;
         }
         }
     }

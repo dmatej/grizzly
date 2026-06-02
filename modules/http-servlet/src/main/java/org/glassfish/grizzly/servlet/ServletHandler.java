@@ -552,7 +552,6 @@ public class ServletHandler extends HttpHandler {
             }
 
             isAcknowledged = true;
-            response.setStatus(HttpStatus.CONINTUE_100);
             response.sendAcknowledgement();
         }
 

@@ -276,6 +276,81 @@ public class ServletHttpContinueTest {
         }
 
     }
+
+    /**
+     * When an ExpectationHandler is configured but does neither {@code acknowledge()} nor {@code fail()} on the action,
+     * {@link ServletHandler} auto-acknowledges by calling {@code ackAction.acknowledge()}. The final response status
+     * must still reflect what the servlet sets — regression for a bug where the 100-Continue status leaked through.
+     */
+    @Test
+    public void testExpectationHandlerAutoAcknowledgeDoesNotLeakStatus() throws Exception {
+
+        HttpServer server = createServer(new HttpServlet() {
+            private static final long serialVersionUID = 1L;
+
+            @Override
+            protected void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
+                // Consume the body. Do NOT call setStatus — the default 200 must surface in the final response,
+                // rather than the 100 the auto-ack code path was previously leaking onto the response status.
+                request.getInputStream().readAllBytes();
+            }
+        }, new ExpectationHandler() {
+
+            @Override
+            public void onExpectAcknowledgement(HttpServletRequest request, HttpServletResponse response, AckAction action) throws Exception {
+                // Intentionally do nothing — ServletHandler will auto-ack.
+            }
+        }, "/path");
+
+        Socket s = null;
+        try {
+            server.start();
+            s = SocketFactory.getDefault().createSocket("localhost", PORT);
+            OutputStream out = s.getOutputStream();
+            InputStream in = s.getInputStream();
+
+            out.write("POST /path HTTP/1.1\r\n".getBytes());
+            out.write(("Host: localhost:" + PORT + "\r\n").getBytes());
+            out.write("Content-Type: application/x-www-form-urlencoded\r\n".getBytes());
+            out.write("Content-Length: 7\r\n".getBytes());
+            out.write("Expect: 100-Continue\r\n".getBytes());
+            out.write("\r\n".getBytes());
+
+            assertEquals("HTTP/1.1 100 Continue", readStatusLine(in));
+
+            out.write("a=hello".getBytes());
+            assertEquals("HTTP/1.1 200 OK", readStatusLine(in));
+
+        } finally {
+            server.shutdownNow();
+            if (s != null) {
+                s.close();
+            }
+        }
+
+    }
+
+    private static String readStatusLine(final InputStream in) throws IOException {
+        // Read the status line, then consume the rest of the message head up to and including the empty line so the
+        // next message is correctly positioned. Avoids InputStream.mark/reset which sockets do not support.
+        final StringBuilder statusLine = new StringBuilder();
+        for (int c; (c = in.read()) != -1 && c != '\r';) {
+            statusLine.append((char) c);
+        }
+        int prev = '\r';
+        for (int c, crlfPairsSeen = 0; (c = in.read()) != -1;) {
+            if (c == '\n' && prev == '\r') {
+                if (++crlfPairsSeen == 2) {
+                    return statusLine.toString();
+                }
+            } else if (c != '\r') {
+                crlfPairsSeen = 0;
+            }
+            prev = c;
+        }
+        return statusLine.toString();
+    }
+
     // --------------------------------------------------------- Private Methods
 
     private HttpServer createServer(final HttpServlet httpServlet, final ExpectationHandler expectationHandler, final String mapping) {

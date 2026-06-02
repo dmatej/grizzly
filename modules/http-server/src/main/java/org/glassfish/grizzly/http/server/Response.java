@@ -270,7 +270,7 @@ public class Response {
             throw new IllegalStateException("Response has already been committed.");
         }
         final Protocol protocol = request.getProtocol();
-        if (protocol.equals(Protocol.HTTP_0_9) || protocol.equals(Protocol.HTTP_1_0)) {
+        if (!protocol.isAtLeast(Protocol.HTTP_1_1)) {
             throw new IllegalStateException("Trailers not supported by response protocol version " + protocol);
         }
         if (protocol.equals(Protocol.HTTP_1_1)) {
@@ -1183,9 +1183,26 @@ public class Response {
             return;
         }
 
-        response.setAcknowledgement(true);
-        outputBuffer.acknowledge();
+        response.setInterimStatus(HttpStatus.CONINTUE_100);
+        outputBuffer.writeInterimResponse();
+    }
 
+    /**
+     * Send a <code>103 Early Hints</code> interim response using the headers currently set on this response.
+     * <p>
+     * This method does not commit the response and may be called multiple times before the response is committed. It has
+     * no effect if the response is already committed or if the request protocol is neither HTTP/1.1 nor HTTP/2 (interim
+     * responses are not supported by HTTP/1.0 and earlier).
+     *
+     * @exception java.io.IOException if an input/output error occurs
+     */
+    public void sendEarlyHints() throws IOException {
+        if (isCommitted() || !request.getProtocol().isAtLeast(Protocol.HTTP_1_1)) {
+            return;
+        }
+
+        response.setInterimStatus(HttpStatus.EARLY_HINTS_103);
+        outputBuffer.writeInterimResponse();
     }
 
     /**

@@ -35,6 +35,7 @@ public class HttpStatus {
     public static final HttpStatus CONINTUE_100 = register(100, "Continue");
     public static final HttpStatus SWITCHING_PROTOCOLS_101 = register(101, "Switching Protocols");
     public static final HttpStatus WEB_SOCKET_PROTOCOL_HANDSHAKE_101 = register(101, "Web Socket Protocol Handshake");
+    public static final HttpStatus EARLY_HINTS_103 = register(103, "Early Hints");
     public static final HttpStatus OK_200 = register(200, "OK");
     public static final HttpStatus CREATED_201 = register(201, "Created");
     public static final HttpStatus ACCEPTED_202 = register(202, "Accepted");

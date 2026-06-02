@@ -670,12 +670,18 @@ public class HttpServerFilter extends HttpCodecFilter {
         }
 
         if (request.requiresAcknowledgement()) {
-            if (!isHttp11 || hasReadyContent) {
-                // if we have any request content, we can ignore the Expect request
+            if (!protocol.isAtLeast(Protocol.HTTP_1_1) || hasReadyContent) {
+                // HTTP/1.0 and earlier do not define the Expect mechanism, and if we have already buffered request
+                // content there is nothing left to wait for.
                 request.requiresAcknowledgement(false);
-            } else if (request.isChunked()) {
+            } else if (protocol == Protocol.HTTP_1_1 && request.isChunked()) {
+                // HTTP/1.1 chunked: acknowledge here using the HTTP/1.1 encoder.
                 sendAcknowledgment(request, response, ctx);
             }
+            // HTTP/2 currently does not reach this callback (Http2BaseFilter#onHttpHeaderParsed is a no-op stub) — its
+            // requiresAcknowledgement bit is set in DecoderUtils and handled by the app-level flow via
+            // HttpHandler.doHandle -> Response.sendAcknowledgement. The else branch is therefore intentionally left
+            // open so any future ≥ HTTP/1.1 protocol routed through this codec callback inherits the same semantics.
         }
     }
 
@@ -748,7 +754,10 @@ public class HttpServerFilter extends HttpCodecFilter {
 
         boolean wasContentAlreadyEncoded = false;
         final HttpResponsePacket response = (HttpResponsePacket) header;
-        if (!response.isCommitted()) {
+        // prepareResponse mutates the headers map (Date, Content-Type, Content-Length, ...) for the final response and
+        // must be skipped while an interim (1xx) response is pending serialization — those mutations describe the final
+        // response and would otherwise leak into the interim packet on the wire.
+        if (!response.isCommitted() && !response.isInterimResponse()) {
             final HttpContent encodedHttpContent = prepareResponse(ctx, response.getRequest(), response, content);
 
             if (encodedHttpContent != null) {
@@ -917,20 +926,28 @@ public class HttpServerFilter extends HttpCodecFilter {
     @Override
     Buffer encodeInitialLine(HttpPacket httpPacket, Buffer output, MemoryManager memoryManager) {
         final HttpResponsePacket httpResponse = (HttpResponsePacket) httpPacket;
+        return encodeInitialLine(httpResponse, httpResponse.getHttpStatus(), output, memoryManager);
+    }
+
+    @Override
+    Buffer encodeInitialLine(HttpPacket httpPacket, HttpStatus status, Buffer output, MemoryManager memoryManager) {
+        return encodeInitialLine((HttpResponsePacket) httpPacket, status, output, memoryManager);
+    }
+
+    private Buffer encodeInitialLine(HttpResponsePacket httpResponse, HttpStatus status, Buffer output, MemoryManager memoryManager) {
         output = put(memoryManager, output, httpResponse.getProtocol().getProtocolBytes());
         output = put(memoryManager, output, Constants.SP);
-        output = put(memoryManager, output, httpResponse.getHttpStatus().getStatusBytes());
+        output = put(memoryManager, output, status.getStatusBytes());
         output = put(memoryManager, output, Constants.SP);
-        if (httpResponse.isCustomReasonPhraseSet()) {
-
+        // CustomReasonPhrase is set on the response for the final status only; an interim status carried via the
+        // {@code status} override always uses its registered reason phrase.
+        if (status == httpResponse.getHttpStatus() && httpResponse.isCustomReasonPhraseSet()) {
             final DataChunk customReasonPhrase = httpResponse.isHtmlEncodingCustomReasonPhrase() ? HttpUtils.filter(httpResponse.getReasonPhraseDC())
                     : HttpUtils.filterNonPrintableCharacters(httpResponse.getReasonPhraseDC());
-
             output = put(memoryManager, output, httpResponse.getTempHeaderEncodingBuffer(), customReasonPhrase);
         } else {
-            output = put(memoryManager, output, httpResponse.getHttpStatus().getReasonPhraseBytes());
+            output = put(memoryManager, output, status.getReasonPhraseBytes());
         }
-
         return output;
     }
 
@@ -1101,8 +1118,7 @@ public class HttpServerFilter extends HttpCodecFilter {
         if ("100-continue".equalsIgnoreCase(request.getHeader(Header.Expect))) {
             // 100-continue is intercepted and acknowledged with a response line with the status 100 in Chunked Transfer Coding.
             // The request processing will continue after acknowledgment of the expectation.
-            response.setStatus(HttpStatus.CONINTUE_100);
-            response.setAcknowledgement(true);
+            response.setInterimStatus(HttpStatus.CONINTUE_100);
             final Buffer resBuf = encodeHttpPacket(ctx, response);
             if (resBuf != null) {
                 HttpProbeNotifier.notifyDataSent(this, ctx.getConnection(), resBuf);

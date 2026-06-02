@@ -30,6 +30,8 @@ import java.util.Collection;
 import java.util.Locale;
 import java.util.Map;
 import java.util.function.Supplier;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 import org.glassfish.grizzly.ThreadCache;
 import org.glassfish.grizzly.http.server.Response;
@@ -76,6 +78,8 @@ public class HttpServletResponseImpl implements HttpServletResponse, Holders.Res
             return null;
         }
     }
+
+    private static final Logger LOGGER = Logger.getLogger(HttpServletResponseImpl.class.getName());
 
     private static final ThreadCache.CachedTypeIndex<HttpServletResponseImpl> CACHE_IDX = ThreadCache.obtainIndex(HttpServletResponseImpl.class, 2);
 
@@ -471,6 +475,19 @@ public class HttpServletResponseImpl implements HttpServletResponse, Holders.Res
             throw new IllegalStateException("Illegal attempt to redirect the response after it has been committed.");
         }
         response.sendRedirect(location);
+    }
+
+    /**
+     * Sends a 103 Early Hints interim response. The {@code @Override} annotation is intentionally omitted; it should be
+     * added once this project targets Servlet 6.2, which introduces {@code HttpServletResponse#sendEarlyHints()}.
+     */
+    public void sendEarlyHints() {
+        try {
+            response.sendEarlyHints();
+        } catch (IOException e) {
+            // Servlet 6.2 signature does not declare IOException; early hints are advisory, so log and swallow.
+            LOGGER.log(Level.WARNING, "Failed to send 103 Early Hints", e);
+        }
     }
 
     /**
