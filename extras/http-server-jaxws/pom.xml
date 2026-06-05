@@ -24,7 +24,7 @@
     <parent>
         <groupId>org.glassfish.grizzly</groupId>
         <artifactId>grizzly-project</artifactId>
-        <version>5.0.2-SNAPSHOT</version>
+        <version>5.0.3-SNAPSHOT</version>
         <relativePath>../../pom.xml</relativePath>
     </parent>
 
@@ -40,7 +40,7 @@
         <dependency>
             <groupId>com.sun.xml.ws</groupId>
             <artifactId>jaxws-rt</artifactId>
-            <version>4.0.4</version>
+            <version>4.0.5</version>
             <scope>provided</scope>
         </dependency>
         <dependency>
@@ -51,13 +51,13 @@
         <dependency>
             <groupId>com.sun.xml.bind</groupId>
             <artifactId>jaxb-osgi</artifactId>
-            <version>4.0.7</version>
+            <version>4.0.9</version>
             <type>jar</type>
         </dependency>
         <dependency>
             <groupId>org.glassfish.metro</groupId>
             <artifactId>webservices-osgi</artifactId>
-            <version>4.0.6</version>
+            <version>4.0.7</version>
             <type>jar</type>
         </dependency>
     </dependencies>

@@ -24,7 +24,7 @@
     <parent>
         <groupId>org.glassfish.grizzly</groupId>
         <artifactId>grizzly-bom</artifactId>
-        <version>5.0.2-SNAPSHOT</version>
+        <version>5.0.3-SNAPSHOT</version>
         <relativePath>boms/bom/pom.xml</relativePath>
     </parent>
 
@@ -94,7 +94,7 @@
         <servlet-version>6.1.0</servlet-version>
         <maven-plugin.version>1.0.0</maven-plugin.version>
         <cobertura.version>2.4</cobertura.version>
-        <gmbal.version>4.1.1</gmbal.version>
+        <gmbal.version>4.1.2</gmbal.version>
         <grizzly.npn.api.version>2.0.1</grizzly.npn.api.version>
         <osgi.version>8.0.0</osgi.version>
         <release.arguments />
@@ -170,7 +170,7 @@
                 </plugin>
                 <plugin>
                     <artifactId>maven-dependency-plugin</artifactId>
-                    <version>3.10.0</version>
+                    <version>3.11.0</version>
                 </plugin>
                 <plugin>
                     <artifactId>maven-resources-plugin</artifactId>
@@ -196,7 +196,7 @@
                 </plugin>
                 <plugin>
                     <artifactId>maven-surefire-plugin</artifactId>
-                    <version>3.5.5</version>
+                    <version>3.5.6</version>
                     <configuration>
                         <reuseForks>false</reuseForks>
                         <useModulePath>false</useModulePath>
@@ -205,7 +205,7 @@
                 </plugin>
                 <plugin>
                     <artifactId>maven-surefire-report-plugin</artifactId>
-                    <version>3.5.5</version>
+                    <version>3.5.6</version>
                 </plugin>
                 <plugin>
                     <artifactId>maven-install-plugin</artifactId>
